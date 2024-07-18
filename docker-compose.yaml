@@ -1,0 +1,171 @@
+x-common-env: &common-env
+  KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+  KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker1:29093,2@broker2:29093'
+  KAFKA_PROCESS_ROLES: 'broker,controller'
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+  CLUSTER_ID: 'ciWo7IWazngRchmPES6q5A=='
+  KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+  KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+  CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+  CONFLUENT_METRICS_ENABLE: 'true'
+  CONFLUENT_SUPPORT_CUSTOMER_ID: anonymous
+
+
+x-common_healthcheck: &common-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+services:
+  broker1:
+    image: confluentinc/cp-server
+    container_name: broker1
+    hostname: broker1
+    ports:
+      - "9092:9092"
+    environment:
+      <<: *common-env
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: 'INTERNAL://broker1:29092,CONTROLLER://broker1:29093,EXTERNAL://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://broker1:29092,EXTERNAL://localhost:9092'
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker1:29092
+    healthcheck:
+      <<: *common-healthcheck
+      test: [ "CMD", "bash", "-c", "echo 'ruok' | nc localhost 9092" ]
+    networks:
+      - datalab
+
+  broker2:
+    image: confluentinc/cp-server
+    container_name: broker2
+    hostname: broker2
+    ports:
+      - "9093:9093"
+    environment:
+      <<: *common-env
+      KAFKA_NODE_ID: 2
+      KAFKA_LISTENERS: 'INTERNAL://broker2:29092,CONTROLLER://broker2:29093,EXTERNAL://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://broker2:29092,EXTERNAL://localhost:9093'
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker2:29092
+    healthcheck:
+      <<: *common-healthcheck
+      test: [ "CMD", "bash", "-c", "echo 'ruok' | nc localhost 9093" ]
+    networks:
+      - datalab
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      broker1:
+        condition: service_healthy
+      broker2: 
+        condition: service_healthy
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker1:29092,broker2:29090'
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      CONFLUENT_METRICS_ENABLE: 'false'
+      # CONTROL_CENTER_STREAMS_NUM_STREAM_THREADS: 2
+      # CONTROL_CENTER_CONNECT_CLUSTER: 'default'
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9021/health" ]
+      interval: 30s
+      timeout: 50s
+      retries: 5
+    networks:
+      - datalab
+  
+  minio: 
+    image: minio/minio
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USERNAME}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - datalab
+
+  minio-init: 
+    image: minio/mc
+    container_name: minio-init
+    entrypoint: |
+      /bin/bash -c "
+      sleep 5;   
+      /usr/bin/mc config --quiet host add myminio http://minio:9000 ${MINIO_USERNAME} ${MINIO-PASSWORD}; 
+      /usr/bin/mc rm -r --force minio/e-commerce;
+      /usr/bin/mc mb minio/e-commerce; 
+      /usr/bin/mc admin service restart dlminio;
+      "
+    depends_on:
+      - minio
+    networks:
+      - datalab
+
+  spark-master: 
+    image: bitnami/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "9090:8080"
+      - "7077:7077"
+    networks:
+      - datalab
+  
+  spark-worker: 
+    image: bitnami/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 1g
+      SPARK_MASTER_URL: spark://spark-master:7077
+    networks:
+      - datalab
+
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra-container
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_USERNAME=${DB_USERNAME}
+      - CASSANDRA_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+      - ./init-keyspace.cql:/docker-entrypoint-initdb.d/init-keyspace.cql
+    healthcheck:
+      test: ["CMD", "cqlsh", "--username", "${DB_USERNAME}", "--password", "${DB_PASSWORD}", "--keyspace", "test"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    networks:
+      - datalab
+
+volumes:
+  cassandra-data:
+
+
+networks:
+  datalab:
+    # driver: bridge
