@@ -2,7 +2,9 @@ import json
 from confluent_kafka import Producer, Consumer
 from utils import serialize_json, delivery_report
 import logging
+from gen_data.create_data import generate_event_data, Events
 
+    
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -28,23 +30,19 @@ def produce_to_kafka(topic, data):
     producer.poll(0)
     
 
-def consume_from_kafka(*topics):
-    """
-    Consume data from Kafka topic
-    """
-    consumed_msg = []
-    consumer.subscribe(topics)
-    while True: 
-        msg = consumer.poll(1)
-        if msg is None: 
-            continue
-        elif msg.error(): 
-            logger.error(f"Consumer error: {msg.error()}")
-            break
-        else: 
-            logger.info(f"Consumed message: {msg.value().decode('utf-8')}")
-            consumed_msg.append(json.loads(msg.value().decode('utf-8')))
-            return consumed_msg
-            
-
-
+if __name__ == "__main__":
+    for data in range(5): 
+        # Generating random user_id, product_id, and event types
+        event_type, user_id, product_id = generate_event_data()
+        
+        # Create class instance of the e-commerce Event
+        event = Events(user_id, event_type, product_id)
+        
+        # Generating data for each event type
+        purchase_data, click_data, search_data = event.generate_all_data()
+        
+        # Producing to Kafka topics
+        produce_to_kafka('purchase', purchase_data)
+        produce_to_kafka('click', click_data)
+        produce_to_kafka('search', search_data)
+        

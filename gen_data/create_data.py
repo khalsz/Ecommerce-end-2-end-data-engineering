@@ -78,11 +78,12 @@ class Events:
 
 
 
-
-for i in range(2):
-    event_type, user_id, product_id = generate_event_data()
-    event = Events(user_id, event_type, product_id)
-    print(event.generate_all_data())
+if __name__ == "__main__":
+    # print(generate_event_data())
+    for i in range(2):
+        event_type, user_id, product_id = generate_event_data()
+        event = Events(user_id, event_type, product_id)
+        print(event.generate_all_data())
 
 
 
