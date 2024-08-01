@@ -10,8 +10,20 @@ from db_cassandra.populate_cassandra import create_table, cassandra_session
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-
+# Function to create a SparkSession with configurations for Cassandra and Kafka
 def create_spark_session():
+    """Creates a SparkSession configured for Cassandra and Kafka interactions.
+
+  This function attempts to create a SparkSession with the following configurations:
+      - App name: SparkConsumer
+      - Master: local[*] (use all available cores)
+      - Cassandra connection host: localhost
+      - Spark driver memory: 4g
+      - Spark jars for Spark SQL Kafka connector and Cassandra connector
+
+  Returns:
+      A SparkSession object or None if an error occurs.
+  """
     spark = None
     
     try: 
@@ -30,7 +42,7 @@ def create_spark_session():
     except Exception as e:
         logger.error(f"Error creating Spark session {e}")
         
-
+# Define schema for different data types (purchase, click, and search)
 purchase_schema =   StructType([StructField("user_id", StringType()), 
                        StructField("product_id", StringType()), 
                        StructField("purchase_time", StringType()), 
@@ -46,22 +58,35 @@ search_schema =   StructType([StructField("user_id", StringType()),
                        StructField("search_time", StringType()), 
                        StructField("search_query", StringType())])
 
+
 session = cassandra_session()
 create_table() # Create table if it doesn't exist
 
+# Function to write data to Cassandra tables (implementation not shown)
 def write_to_dbs(data, tab_name, session, batch_id): 
-    print("writing to dbs")
-    
-    logger.info("Written to database")
-    
+    logger.info("Writtingn to database")
     try: 
+        # Implement logic to write data to Cassandra tables
         insert_data_into_cassandra(data, tab_name, session)
         data.foreach(lambda row: put_object(row.asDict(), tab_name))
     except Exception as e: 
         logger.error(f"Error writing batch {batch_id} to databases: {e}")
 
 
+# Function to read a stream from Kafka 
 def read_stream (spark, schema, topic): 
+    """Reads a stream of data from a Kafka topic.
+
+  This function attempts to read a stream of data from a Kafka topic using the provided SparkSession and schema.
+
+  Args:
+      spark: A SparkSession object.
+      schema: A StructType defining the schema of the data.
+      topic: The name of the Kafka topic to read from.
+
+  Returns:
+      A DataFrame containing the read data or None if an error occurs.
+  """
     try: 
         if spark is not None: 
             logger.info("Reading stream")
@@ -88,8 +113,22 @@ def read_stream (spark, schema, topic):
     except Exception as e:
         logger.error(e)
 
-    
+
+# Function to write a stream of data to Cassandra tables
 def write_stream(data_df, tab_name, checkpoint, sess): 
+    """Writes a stream of DataFrame data to Cassandra tables.
+
+    This function creates a streaming query that writes the data in the DataFrame to a Cassandra table 
+    in batches.
+
+    Args:
+        data_df: A spark dataframe object.
+        tab_name: The name of table used to save data to cassandra and minio.
+        checkpoint: WriteStream checkpoint name.
+        sess: spark session. 
+    Returns:
+      A spark query object.
+    """
     try: 
         logger.info("Writing stream")
         query = data_df.writeStream \
