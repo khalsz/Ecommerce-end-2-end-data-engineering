@@ -22,7 +22,20 @@ credentials = PlainTextAuthProvider(
 )
 
 
+# Function to create a Cassandra keyspace named "commerce_stream"
 def create_keyspace(session):
+    """
+    Creates a Cassandra keyspace named "commerce_stream" if it doesn't exist.
+
+    This function attempts to create a keyspace named "commerce_stream" with a replication strategy
+    using 'SimpleStrategy' and a replication factor of 1 (adjust as needed).
+
+    Args:
+        session: A Cassandra session object.
+
+    Raises:
+        Exception: If an error occurs while creating the keyspace.
+    """
     try: 
         logger.info("Creating Keyspace")
         session.execute("""
@@ -35,7 +48,21 @@ def create_keyspace(session):
         logger.error(f"Error connecting to Cassandra: {e}")
 
 
-def create_table(): 
+# Function to create Cassandra tables for purchases, clicks, and searches
+def create_table():
+    """
+    Creates Cassandra tables named "purchase", "click", and "search" if they don't exist.
+
+    This function connects to a Cassandra cluster on localhost and attempts to create three tables:
+        - purchase: Stores purchase data with user_id, product_id, purchase_time, quantity, price, and payment_type.
+        - click: Stores click data with user_id, product_id, and click_time.
+        - search: Stores search data with user_id, search_time, and search_query.
+
+    The tables have appropriate primary keys defined.
+
+    Returns:
+        True on successful table creation, raises an exception otherwise.
+    """
     try: 
         logger.info("Creating Table")
         session = Cluster(["localhost"]).connect()
@@ -77,7 +104,18 @@ def create_table():
 
 
 
-def cassandra_session(): 
+# Function to establish a connection to the Cassandra cluster
+def cassandra_session():
+    """
+    Establishes a connection to the Cassandra cluster on localhost.
+
+    This function attempts to connect to the Cassandra cluster at "localhost" using the provided credentials
+    (assumed to be defined elsewhere). If successful, it creates the "commerce_stream" keyspace if it doesn't exist
+    and returns the session object.
+
+    Returns:
+        A Cassandra session object on successful connection, None otherwise.
+    """ 
     try: 
         logger.info("Connecting to Cassandra")
         print(credentials)
@@ -91,6 +129,17 @@ def cassandra_session():
             
 
 def insert_data_into_cassandra(data, tab_name, session):
+    """
+    Inserts data from a Spark DataFrame into a Cassandra table.
+
+    This function checks if the data DataFrame and session object are valid. If so, it attempts to write the data
+    in append mode to the specified table name within the "commerce_stream" keyspace using Spark SQL's Cassandra connector.
+
+    Args:
+        data: A Spark DataFrame containing the data to be inserted.
+        tab_name: The name of the Cassandra table to insert data into.
+        session: A Cassandra session object.
+    """
     try: 
         if (data is not None) and session: 
             data.show()

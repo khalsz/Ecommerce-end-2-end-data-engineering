@@ -11,8 +11,18 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-# function to deliver callback
-def delivery_report(err, msg): 
+# Function to handle Kafka message delivery callback
+def delivery_report(err, msg):
+    """
+    Callback function for Kafka message delivery.
+
+    This function is invoked by the Kafka producer after a message is delivered.
+    It checks for any errors during delivery and logs the outcome.
+
+    Args:
+        err: An error object if the message delivery failed, None otherwise.
+        msg: The Kafka message object that was delivered.
+    """
     if err is not None:
         print(f'Message delivery failed: {err}')
     else: 
@@ -24,16 +34,16 @@ config = {
 }
 
 
-# Initializing producer and consumer
-
-consumer = Consumer(config | {'group.id': 'test-group', 
-                              'auto.offset.reset': 'earliest', 
-                               'enable.auto.commit': False})
-
 
 def produce_to_kafka(data, topic):
     """
-    Produce data to Kafka topic
+    Produces data to a Kafka topic.
+
+    This function serializes the provided data as JSON and sends it to the specified Kafka topic.
+
+    Args:
+        data: The data object to be produced.
+        topic: The name of the Kafka topic to produce to.
     """
     try: 
         logger.info("Initializing producer and consumer")
