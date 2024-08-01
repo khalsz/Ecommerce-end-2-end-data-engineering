@@ -152,9 +152,10 @@ services:
       - CASSANDRA_PASSWORD=${DB_PASSWORD}
     volumes:
       - cassandra-data:/var/lib/cassandra
-      - ./init-keyspace.cql:/docker-entrypoint-initdb.d/init-keyspace.cql
+      # - ./init-keyspace.cql:/docker-entrypoint-initdb.d/init-keyspace.cql
     healthcheck:
-      test: ["CMD", "cqlsh", "--username", "${DB_USERNAME}", "--password", "${DB_PASSWORD}", "--keyspace", "test"]
+      test: ["CMD", "cqlsh", "--username", "${DB_USERNAME}", "--password", "${DB_PASSWORD}", "-e", "describe keyspaces" ]
+      # test: ["CMD", "cqlsh", "--username", "${DB_USERNAME}", "--password", "${DB_PASSWORD}", "--keyspace", "test"]
       interval: 1m30s
       timeout: 30s
       retries: 5

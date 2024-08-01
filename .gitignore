@@ -1,1 +1,5 @@
 .env
+config_cassandra.py
+minio_config.py
+
+py_venv/
