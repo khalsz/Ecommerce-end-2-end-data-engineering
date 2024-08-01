@@ -90,8 +90,6 @@ def read_stream (spark, schema, topic):
     try: 
         if spark is not None: 
             logger.info("Reading stream")
-            # print("here is the topic", topic)
-            # print("here is the spark", spark)
             
             # Extracting data from kafka stream
             batch_df = spark.readStream.format("kafka") \
@@ -160,10 +158,8 @@ if __name__ == "__main__":
     query2 = write_stream(click_df, "click", "purchase_check2", session)
     query3 = write_stream(search_df, "search", "purchase_check3", session)
     
-    
-    query1.awaitTermination()
-    query2.awaitTermination()
-    query3.awaitTermination()
+    # Wait for any query to terminate
+    spark.streams.awaitAnyTermination()
     
     
     spark.stop()
