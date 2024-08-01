@@ -1,5 +1,5 @@
 config = {
-    "access_key": "Y9u3vqkTHSciiKUrG4Iw", 
-    "secret_key": "av4NSbeGVmYHeMOX0OyOcgF3fAS0AEB1WqdVxOjf", 
+    "access_key": "6ZIRNwcSll3Ai23adCkY", 
+    "secret_key": "wbQ1ILxph29qYvYJe9miZDDC2oeVWZqBqYMRt2nA", 
     "endpoint": "localhost:9000"
 }
