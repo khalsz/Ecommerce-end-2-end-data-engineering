@@ -1,4 +1,4 @@
-Ecommerce Real-time Data Processing with Apache Kafka and Spark
+# Ecommerce Real-time Data Processing with Apache Kafka and Spark
 
 ## Project Overview
 The project demonstrates a real-time data processing pipeline for e-commerce events using Apache Kafka, Apache Cassandra, Apache Spark, and MinIO. The pipeline generates synthetic e-commerce data (clicks, searches, purchases), produces them to Kafka topics, consumes and processes them using Spark, and writes the data to both Cassandra and MinIO.
